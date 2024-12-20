@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  username     String   @unique
+  email        String   @unique
+  password     String? // Optional for social logins
+  phoneNumber  String? // Optional
+  role         String   @default("customer") // 'customer', 'admin', etc.
+  profileImage String? // Profile picture URL
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  addresses    Address[]
+  socialLogins SocialLogin[]
+  // sessions     UserSession[]
+  orders       Order[]
+}
+
+model Address {
+  id           Int      @id @default(autoincrement())
+  type         String   @default("shipping") // 'shipping' or 'billing'
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  postalCode   String
+  country      String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relation
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SocialLogin {
+  id         Int      @id @default(autoincrement())
+  provider   String // e.g., 'google', 'facebook'
+  providerId String // ID from the third-party provider
+  createdAt  DateTime @default(now())
+
+  // Relation
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// model UserSession {
+//   id         Int      @id @default(autoincrement())
+//   token      String   // JWT or session token
+//   userAgent  String?  // Device or browser info
+//   ipAddress  String?  // User's IP address
+//   createdAt  DateTime @default(now())
+//   expiresAt  DateTime
+
+//   // Relation
+//   userId     Int
+//   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// }
+
+model Category {
+  id       Int        @id @default(autoincrement())
+  name     String
+  parentId Int? // Optional field for self-referencing parent category
+  parent   Category?  @relation("ParentCategory", fields: [parentId], references: [id])
+  children Category[] @relation("ParentCategory")
+
+  // Relations
+  products Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  OrderItem      OrderItem[]
+  ProductVariant ProductVariant[]
+}
+
+model ProductVariant {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku       String   @unique
+  price     Decimal  @default(0.00)
+  stock     Int
+  createdAt DateTime @default(now())
+
+  attributes ProductVariantAttribute[]
+}
+
+model ProductVariantAttribute {
+  id    Int    @id @default(autoincrement())
+  name  String // Attribute name, e.g., "Size", "Color"
+  value String // Attribute value, e.g., "M", "Blue"
+
+  // Relation
+  variantId Int
+  product   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id          Int            @id @default(autoincrement())
+  status      DeliveryStatus @default(PENDING) // 'pending', 'shipped', 'delivered', etc.
+  totalAmount Decimal        @default(0.00)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  userId Int
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  quantity  Int // Quantity of the product in the order
+  price     Decimal @default(0.00) // Price per unit of the product
+  productId Int // Foreign key to Product
+  orderId   Int // Foreign key to Order
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+enum DeliveryStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+}
