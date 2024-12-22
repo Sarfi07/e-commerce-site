@@ -1,14 +1,12 @@
 "use client";
-
-import { useEffect } from "react";
 import { useActivePage } from "@/context/ActivePageContext";
+import { useEffect } from "react";
 
 export default function About() {
   const { setActivePage } = useActivePage();
 
   useEffect(() => {
-    setActivePage("About");
+    setActivePage("categories");
   }, [setActivePage]);
-
-  return <h1>About Page</h1>;
+  return <>Categories</>;
 }
